@@ -13,7 +13,7 @@
     <header class="hero">
       <div>
         <h1>BlurX Pro</h1>
-        <p>تمويه، بكسلة، أو تعتيم جزء محدد من الصور والفيديو و GIF.</p>
+        <p>تمويه، بكسلة، أو تعتيم جزء محدد من الصور والفيديو و GIF المتحرك.</p>
       </div>
       <span class="badge">PWA</span>
     </header>
@@ -53,7 +53,7 @@
           <button data-export-img="png">PNG</button>
           <button data-export-img="jpeg">JPG</button>
           <button data-export-img="webp">WEBP</button>
-          <button data-export-img="gif">GIF</button>
+          <button data-export-img="gif">GIF متحرك</button>
         </div>
 
         <h2>تصدير الفيديو</h2>
@@ -68,7 +68,7 @@
           <progress id="progressBar" max="100" value="0"></progress>
         </div>
 
-        <p class="note">اضغط مرتين على المعاينة لتحديد كامل الملف. GIF والفيديو الطويل قد يحتاجان وقتاً وحجماً أقل.</p>
+        <p class="note">هذه النسخة تدعم قراءة GIF المتحرك وتطبيق التأثير على الفريمات. للملفات الكبيرة قلّل الحجم والمدة.</p>
       </aside>
 
       <section class="preview panel">
@@ -85,6 +85,7 @@
   <div id="toast" hidden></div>
 
   <script src="https://cdn.jsdelivr.net/npm/gif.js.optimized/dist/gif.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gifuct-js/dist/gifuct.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

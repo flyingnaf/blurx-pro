@@ -17,6 +17,7 @@ const progressBar = document.getElementById('progressBar');
 const progressText = document.getElementById('progressText');
 
 let currentFile = null;
+let currentFileBuffer = null;
 let type = null;
 let effect = 'blur';
 let selection = null;
@@ -31,46 +32,36 @@ function showToast(msg) {
   toast.hidden = false;
   setTimeout(() => toast.hidden = true, 4200);
 }
-
 function setBusy(text, percent = 0) {
   progressBox.hidden = false;
   progressText.textContent = text;
   progressBar.value = percent;
 }
-
 function clearBusy() {
   progressBox.hidden = true;
   progressBar.value = 0;
   progressText.textContent = '';
 }
-
 function fitCanvas(w, h) {
-  const maxW = 1280;
-  const maxH = 900;
+  const maxW = 1280, maxH = 900;
   const r = Math.min(maxW / w, maxH / h, 1);
   canvas.width = Math.max(1, Math.round(w * r));
   canvas.height = Math.max(1, Math.round(h * r));
 }
-
 function clientToCanvas(e) {
   const rect = canvas.getBoundingClientRect();
   const touch = e.touches?.[0] || e.changedTouches?.[0] || e;
   return {
     x: (touch.clientX - rect.left) * (canvas.width / rect.width),
-    y: (touch.clientY - rect.top) * (canvas.height / rect.height),
-    cssX: touch.clientX - rect.left,
-    cssY: touch.clientY - rect.top
+    y: (touch.clientY - rect.top) * (canvas.height / rect.height)
   };
 }
-
 function normalizeRect(a, b) {
   return { x: Math.min(a.x,b.x), y: Math.min(a.y,b.y), w: Math.abs(a.x-b.x), h: Math.abs(a.y-b.y) };
 }
-
 function updateSelectionEl() {
   if (!selection || selection.w < 3 || selection.h < 3) { selectionEl.hidden = true; return; }
-  const crect = canvas.getBoundingClientRect();
-  const wrect = wrap.getBoundingClientRect();
+  const crect = canvas.getBoundingClientRect(), wrect = wrap.getBoundingClientRect();
   selectionEl.hidden = false;
   selectionEl.style.left = (crect.left - wrect.left + selection.x * (crect.width / canvas.width)) + 'px';
   selectionEl.style.top = (crect.top - wrect.top + selection.y * (crect.height / canvas.height)) + 'px';
@@ -78,8 +69,9 @@ function updateSelectionEl() {
   selectionEl.style.height = (selection.h * (crect.height / canvas.height)) + 'px';
 }
 
-function loadFile(file) {
+async function loadFile(file) {
   currentFile = file;
+  currentFileBuffer = null;
   processedRegions = [];
   selection = null;
   updateSelectionEl();
@@ -101,6 +93,7 @@ function loadFile(file) {
     };
   } else {
     type = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif') ? 'gif' : 'image';
+    if (type === 'gif') currentFileBuffer = await file.arrayBuffer();
     video.pause();
     video.hidden = true;
     img.hidden = false;
@@ -108,7 +101,7 @@ function loadFile(file) {
     img.onload = () => {
       fitCanvas(img.naturalWidth, img.naturalHeight);
       renderSourceFrame();
-      showToast(type === 'gif' ? 'تم تحميل GIF. تصدير GIF المتحرك محدود حسب المتصفح.' : 'تم تحميل الصورة.');
+      showToast(type === 'gif' ? 'تم تحميل GIF متحرك. التصدير سيحافظ على الحركة.' : 'تم تحميل الصورة.');
     };
   }
 }
@@ -123,20 +116,14 @@ function renderSourceFrame() {
   }
   processedRegions.forEach(r => applyStoredEffect(r));
 }
-
 function drawVideoLoop() {
   cancelAnimationFrame(videoRAF);
-  const loop = () => {
-    if (type === 'video') renderSourceFrame();
-    videoRAF = requestAnimationFrame(loop);
-  };
+  const loop = () => { if (type === 'video') renderSourceFrame(); videoRAF = requestAnimationFrame(loop); };
   loop();
 }
-
 function makeRegion(rect = selection) {
   if (!rect || rect.w < 2 || rect.h < 2) return null;
-  const x = Math.max(0, Math.floor(rect.x));
-  const y = Math.max(0, Math.floor(rect.y));
+  const x = Math.max(0, Math.floor(rect.x)), y = Math.max(0, Math.floor(rect.y));
   return {
     x, y,
     w: Math.max(1, Math.min(canvas.width - x, Math.floor(rect.w))),
@@ -146,26 +133,26 @@ function makeRegion(rect = selection) {
     feather: Number(rect.feather ?? feather.value)
   };
 }
-
+function scaleRegion(r, sx, sy) {
+  return { ...r, x: r.x*sx, y: r.y*sy, w: r.w*sx, h: r.h*sy, amount: r.amount*((sx+sy)/2), feather: r.feather*((sx+sy)/2) };
+}
 function applyEffect(rect = selection, remember = true) {
   const region = makeRegion(rect);
   if (!region) { showToast('حدد منطقة أولاً.'); return; }
   applyStoredEffect(region);
   if (remember) processedRegions.push({ ...region });
 }
-
 function applyStoredEffect(r) {
   if (r.effect === 'blur') blurRect(r);
   else if (r.effect === 'pixelate') pixelateRect(r);
   else darkenRect(r);
 }
-
 function blurRect(r) {
-  const pad = Math.max(0, r.feather);
-  const sx = Math.max(0, r.x - pad);
-  const sy = Math.max(0, r.y - pad);
-  const sw = Math.min(canvas.width - sx, r.w + pad * 2);
-  const sh = Math.min(canvas.height - sy, r.h + pad * 2);
+  const pad = Math.max(0, Math.round(r.feather));
+  const sx = Math.max(0, Math.floor(r.x - pad));
+  const sy = Math.max(0, Math.floor(r.y - pad));
+  const sw = Math.min(canvas.width - sx, Math.ceil(r.w + pad * 2));
+  const sh = Math.min(canvas.height - sy, Math.ceil(r.h + pad * 2));
   const off = document.createElement('canvas');
   off.width = sw; off.height = sh;
   const o = off.getContext('2d');
@@ -176,7 +163,6 @@ function blurRect(r) {
   ctx.drawImage(off, pad, pad, r.w, r.h, r.x, r.y, r.w, r.h);
   ctx.restore();
 }
-
 function pixelateRect(r) {
   const scale = Math.max(3, Math.floor(r.amount));
   const small = document.createElement('canvas');
@@ -192,7 +178,6 @@ function pixelateRect(r) {
   ctx.imageSmoothingEnabled = true;
   ctx.restore();
 }
-
 function darkenRect(r) {
   ctx.save();
   roundedClip(r.x, r.y, r.w, r.h, Math.min(18, r.feather));
@@ -200,14 +185,12 @@ function darkenRect(r) {
   ctx.fillRect(r.x, r.y, r.w, r.h);
   ctx.restore();
 }
-
 function roundedClip(x, y, w, h, rad) {
   ctx.beginPath();
   if (ctx.roundRect) ctx.roundRect(x, y, w, h, rad);
   else ctx.rect(x, y, w, h);
   ctx.clip();
 }
-
 function reset() {
   processedRegions = [];
   selection = null;
@@ -216,7 +199,6 @@ function reset() {
   renderSourceFrame();
   showToast('تمت إعادة الضبط.');
 }
-
 function downloadBlob(blob, name) {
   const a = document.createElement('a');
   const url = URL.createObjectURL(blob);
@@ -227,7 +209,6 @@ function downloadBlob(blob, name) {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 8000);
 }
-
 function exportImage(format) {
   if (!currentFile) { showToast('ارفع ملف أولاً.'); return; }
   if (format === 'gif') return exportGif();
@@ -239,9 +220,7 @@ function exportImage(format) {
     showToast('تم تنزيل الصورة.');
   }, mime, .95);
 }
-
 function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
-
 function seekVideoTo(t) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('انتهت مهلة قراءة الفيديو.')), 6000);
@@ -250,24 +229,48 @@ function seekVideoTo(t) {
   });
 }
 
-async function exportGif() {
-  if (!currentFile) { showToast('ارفع ملف أولاً.'); return; }
+function drawGifFrameToCanvas(frame, patchCanvas, baseCanvas, baseCtx, targetCanvas, targetCtx) {
+  patchCanvas.width = frame.dims.width;
+  patchCanvas.height = frame.dims.height;
+  const pctx = patchCanvas.getContext('2d');
+  const imageData = pctx.createImageData(frame.dims.width, frame.dims.height);
+  imageData.data.set(frame.patch);
+  pctx.putImageData(imageData, 0, 0);
+  baseCtx.drawImage(patchCanvas, frame.dims.left, frame.dims.top);
+  targetCtx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+  targetCtx.drawImage(baseCanvas, 0, 0, targetCanvas.width, targetCanvas.height);
+}
 
-  if (!window.GIF) {
-    showToast('مكتبة GIF غير محملة. تأكد من وجود script gif.js في index.html.');
-    clearBusy();
-    return;
-  }
+async function exportAnimatedGifFromGif() {
+  if (!currentFileBuffer) currentFileBuffer = await currentFile.arrayBuffer();
+  if (!window.gifuct || !window.gifuct.parseGIF) throw new Error('مكتبة قراءة GIF لم تُحمّل.');
+  const parsed = window.gifuct.parseGIF(currentFileBuffer);
+  let frames = window.gifuct.decompressFrames(parsed, true);
+  if (!frames.length) throw new Error('لم يتم العثور على فريمات في GIF.');
+
+  const gifW = parsed.lsd.width;
+  const gifH = parsed.lsd.height;
+  const maxFrames = 120;
+  if (frames.length > maxFrames) frames = frames.slice(0, maxFrames);
 
   const maxWidth = 640;
-  const scale = Math.min(1, maxWidth / canvas.width);
-  const outW = Math.max(1, Math.round(canvas.width * scale));
-  const outH = Math.max(1, Math.round(canvas.height * scale));
+  const outScale = Math.min(1, maxWidth / gifW);
+  const outW = Math.max(1, Math.round(gifW * outScale));
+  const outH = Math.max(1, Math.round(gifH * outScale));
 
-  const outCanvas = document.createElement('canvas');
-  outCanvas.width = outW;
-  outCanvas.height = outH;
-  const outCtx = outCanvas.getContext('2d', { willReadFrequently: true });
+  const baseCanvas = document.createElement('canvas');
+  baseCanvas.width = gifW;
+  baseCanvas.height = gifH;
+  const baseCtx = baseCanvas.getContext('2d', { willReadFrequently: true });
+
+  const patchCanvas = document.createElement('canvas');
+  const workCanvas = document.createElement('canvas');
+  workCanvas.width = outW;
+  workCanvas.height = outH;
+  const workCtx = workCanvas.getContext('2d', { willReadFrequently: true });
+
+  const originalCanvas = canvas;
+  const originalCtx = ctx;
 
   const encoder = new GIF({
     workers: 1,
@@ -277,42 +280,81 @@ async function exportGif() {
     workerScript: './gif.worker.js'
   });
 
-  let done = false;
-  const timeout = setTimeout(() => {
-    if (!done) {
-      clearBusy();
-      showToast('تصدير GIF أخذ وقت طويل. قلّل مدة الفيديو أو حجم الملف.');
-      try { encoder.abort && encoder.abort(); } catch(e) {}
-    }
-  }, 45000);
-
-  encoder.on('progress', p => setBusy(`جاري تجهيز GIF... ${Math.round(p * 100)}%`, Math.round(p * 100)));
+  encoder.on('progress', p => setBusy(`جاري إنشاء GIF المتحرك... ${Math.round(p*100)}%`, Math.round(p*100)));
   encoder.on('finished', blob => {
-    done = true;
-    clearTimeout(timeout);
     clearBusy();
-    downloadBlob(blob, 'blurx-export.gif');
-    showToast('تم تصدير GIF بنجاح.');
+    downloadBlob(blob, 'blurx-animated.gif');
+    showToast('تم تصدير GIF متحرك بنجاح.');
+    renderSourceFrame();
   });
-  encoder.on('abort', () => {
-    clearBusy();
-    showToast('تم إيقاف تصدير GIF.');
-  });
+
+  const sx = outW / canvas.width;
+  const sy = outH / canvas.height;
+  const regions = processedRegions.length ? processedRegions : (selection ? [makeRegion(selection)] : []);
+  if (!regions.length) showToast('لم تحدد منطقة، سيتم تصدير GIF بدون تأثير.');
+
+  for (let i = 0; i < frames.length; i++) {
+    const frame = frames[i];
+
+    // دعم disposal بسيط: يمسح الفريم عند disposalType 2 قبل الرسم التالي
+    if (frame.disposalType === 2) {
+      baseCtx.clearRect(frame.dims.left, frame.dims.top, frame.dims.width, frame.dims.height);
+    }
+
+    drawGifFrameToCanvas(frame, patchCanvas, baseCanvas, baseCtx, workCanvas, workCtx);
+
+    // نستخدم canvas الرئيسي مؤقتاً لتطبيق نفس دوال التأثير
+    const oldW = canvas.width, oldH = canvas.height;
+    canvas.width = outW; canvas.height = outH;
+    ctx.clearRect(0, 0, outW, outH);
+    ctx.drawImage(workCanvas, 0, 0);
+    regions.filter(Boolean).forEach(r => applyStoredEffect(scaleRegion(r, sx, sy)));
+    workCtx.clearRect(0, 0, outW, outH);
+    workCtx.drawImage(canvas, 0, 0);
+    canvas.width = oldW; canvas.height = oldH;
+
+    const delay = Math.max(20, (frame.delay || 10) * 10);
+    encoder.addFrame(workCtx, { copy: true, delay });
+
+    setBusy(`معالجة فريمات GIF... ${i + 1}/${frames.length}`, Math.round(((i + 1) / frames.length) * 70));
+    if (i % 8 === 0) await wait(0);
+  }
+
+  setBusy('جاري ضغط GIF المتحرك...', 75);
+  encoder.render();
+}
+
+async function exportGif() {
+  if (!currentFile) { showToast('ارفع ملف أولاً.'); return; }
+  if (!window.GIF) { showToast('مكتبة GIF غير محملة.'); clearBusy(); return; }
 
   try {
     setBusy('جاري تجهيز GIF...', 5);
 
-    if (type === 'video') {
-      const oldMuted = video.muted;
-      const wasPaused = video.paused;
-      video.pause();
-      video.muted = true;
+    if (type === 'gif') {
+      await exportAnimatedGifFromGif();
+      return;
+    }
 
+    const maxWidth = 640;
+    const scale = Math.min(1, maxWidth / canvas.width);
+    const outW = Math.max(1, Math.round(canvas.width * scale));
+    const outH = Math.max(1, Math.round(canvas.height * scale));
+    const outCanvas = document.createElement('canvas');
+    outCanvas.width = outW; outCanvas.height = outH;
+    const outCtx = outCanvas.getContext('2d', { willReadFrequently: true });
+
+    const encoder = new GIF({ workers: 1, quality: 12, width: outW, height: outH, workerScript: './gif.worker.js' });
+    encoder.on('progress', p => setBusy(`جاري تجهيز GIF... ${Math.round(p*100)}%`, Math.round(p*100)));
+    encoder.on('finished', blob => { clearBusy(); downloadBlob(blob, 'blurx-export.gif'); showToast('تم تصدير GIF بنجاح.'); });
+
+    if (type === 'video') {
+      const oldMuted = video.muted, wasPaused = video.paused;
+      video.pause(); video.muted = true;
       const duration = Math.min(Number.isFinite(video.duration) ? video.duration : 3, 4);
       const fps = 8;
-      let frame = 0;
       const total = Math.ceil(duration * fps);
-
+      let frame = 0;
       for (let t = 0; t < duration; t += 1 / fps) {
         await seekVideoTo(t);
         renderSourceFrame();
@@ -322,21 +364,8 @@ async function exportGif() {
         frame++;
         setBusy(`إضافة فريمات GIF... ${frame}/${total}`, Math.round((frame / total) * 70));
       }
-
       video.muted = oldMuted;
       if (!wasPaused) video.play().catch(()=>{});
-    } else if (type === 'gif') {
-      // ملاحظة: المتصفح لا يعطينا كل فريمات GIF بسهولة؛ لذلك نلتقط 24 لقطة من العرض الحالي.
-      const fps = 8;
-      const total = 24;
-      for (let i = 0; i < total; i++) {
-        renderSourceFrame();
-        outCtx.clearRect(0, 0, outW, outH);
-        outCtx.drawImage(canvas, 0, 0, outW, outH);
-        encoder.addFrame(outCtx, { copy: true, delay: Math.round(1000 / fps) });
-        setBusy(`إضافة فريمات GIF... ${i + 1}/${total}`, Math.round(((i + 1) / total) * 70));
-        await wait(Math.round(1000 / fps));
-      }
     } else {
       renderSourceFrame();
       outCtx.drawImage(canvas, 0, 0, outW, outH);
@@ -346,7 +375,6 @@ async function exportGif() {
     setBusy('جاري إنشاء ملف GIF...', 75);
     encoder.render();
   } catch (err) {
-    clearTimeout(timeout);
     clearBusy();
     console.error(err);
     showToast('فشل تصدير GIF: ' + (err.message || 'خطأ غير معروف'));
@@ -356,10 +384,7 @@ async function exportGif() {
 async function exportVideo(requested) {
   if (!currentFile) { showToast('ارفع ملف أولاً.'); return; }
   if (requested === 'gif') return exportGif();
-  if (type !== 'video') {
-    showToast('تصدير WEBM/MP4 يحتاج ملف فيديو. للصور استخدم JPG/PNG/WEBP/GIF.');
-    return;
-  }
+  if (type !== 'video') { showToast('تصدير WEBM/MP4 يحتاج ملف فيديو.'); return; }
   try {
     const mp4Supported = MediaRecorder.isTypeSupported('video/mp4;codecs=h264') || MediaRecorder.isTypeSupported('video/mp4');
     const supported = requested === 'mp4' && mp4Supported ? 'video/mp4' : 'video/webm';
@@ -367,11 +392,7 @@ async function exportVideo(requested) {
     const chunks = [];
     const rec = new MediaRecorder(stream, { mimeType: supported });
     rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
-    rec.onstop = () => {
-      clearBusy();
-      downloadBlob(new Blob(chunks, { type: supported }), `blurx-video.${supported.includes('mp4') ? 'mp4' : 'webm'}`);
-      showToast('تم تجهيز ملف الفيديو.');
-    };
+    rec.onstop = () => { clearBusy(); downloadBlob(new Blob(chunks, { type: supported }), `blurx-video.${supported.includes('mp4') ? 'mp4' : 'webm'}`); showToast('تم تجهيز ملف الفيديو.'); };
     video.currentTime = 0;
     await video.play();
     rec.start();
@@ -379,7 +400,7 @@ async function exportVideo(requested) {
     video.onended = () => rec.stop();
   } catch(err) {
     clearBusy();
-    showToast('فشل تصدير الفيديو. جرّب WEBM أو متصفح Chrome/Edge.');
+    showToast('فشل تصدير الفيديو. جرّب WEBM أو Chrome/Edge.');
     console.error(err);
   }
 }
@@ -399,8 +420,7 @@ intensity.oninput = () => intensityValue.textContent = intensity.value;
 feather.oninput = () => featherValue.textContent = feather.value;
 
 canvas.addEventListener('pointerdown', e => {
-  drawing = true;
-  start = clientToCanvas(e);
+  drawing = true; start = clientToCanvas(e);
   selection = { x: start.x, y: start.y, w: 0, h: 0 };
   updateSelectionEl();
 });
