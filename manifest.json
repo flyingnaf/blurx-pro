@@ -1,9 +1,10 @@
 {
-  "name": "BlurX Pro",
+  "name": "BlurX Pro Mobile",
   "short_name": "BlurX",
-  "start_url": "./",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#08080b",
   "theme_color": "#b30000",
+  "description": "Blur, pixelate and redact images, GIFs and short videos.",
   "icons": []
 }

@@ -2,25 +2,28 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>BlurX Pro</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>BlurX Pro Mobile</title>
   <meta name="theme-color" content="#b30000" />
-  <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="styles.css" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="BlurX" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="manifest.json?v=4" />
+  <link rel="stylesheet" href="styles.css?v=4" />
 </head>
 <body>
   <main class="app">
     <header class="hero">
       <div>
         <h1>BlurX Pro</h1>
-        <p>تمويه، بكسلة، أو تعتيم جزء محدد من الصور والفيديو و GIF المتحرك.</p>
+        <p>تمويه، بكسلة، أو تعتيم جزء محدد من الصور و GIF والفيديو.</p>
       </div>
-      <span class="badge">PWA</span>
+      <span class="badge">Mobile Ready</span>
     </header>
 
     <section class="panel upload" id="dropZone">
       <input id="fileInput" type="file" accept="image/*,video/*,.gif,.mov,.mp4,.webm,.m4v" />
-      <label for="fileInput">اختر ملف أو اسحبه هنا</label>
+      <label for="fileInput">اختر ملف</label>
       <small id="fileInfo">لم يتم اختيار ملف</small>
     </section>
 
@@ -39,8 +42,14 @@
         <label>نعومة الحواف: <b id="featherValue">8</b></label>
         <input id="feather" type="range" min="0" max="40" value="8" />
 
+        <label>جودة GIF للجوال</label>
+        <select id="gifMode">
+          <option value="mobile" selected>ثابتة للجوال</option>
+          <option value="quality">جودة أعلى</option>
+        </select>
+
         <div class="row">
-          <button id="applyBtn">تطبيق على التحديد</button>
+          <button id="applyBtn">تطبيق التحديد</button>
           <button id="fullBtn">تطبيق كامل</button>
         </div>
         <div class="row">
@@ -68,7 +77,9 @@
           <progress id="progressBar" max="100" value="0"></progress>
         </div>
 
-        <p class="note">هذه النسخة تدعم قراءة GIF المتحرك وتطبيق التأثير على الفريمات. للملفات الكبيرة قلّل الحجم والمدة.</p>
+        <p class="note">
+          للجوال: استخدم GIF أقل من 10MB ومدة قصيرة. للآيفون افتح من Safari ثم Add to Home Screen.
+        </p>
       </aside>
 
       <section class="preview panel">
@@ -86,6 +97,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/gif.js.optimized/dist/gif.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gifuct-js/dist/gifuct.min.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
