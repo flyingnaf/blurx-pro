@@ -12,6 +12,9 @@ const intensityValue = document.getElementById('intensityValue');
 const feather = document.getElementById('feather');
 const featherValue = document.getElementById('featherValue');
 const toast = document.getElementById('toast');
+const progressBox = document.getElementById('progressBox');
+const progressBar = document.getElementById('progressBar');
+const progressText = document.getElementById('progressText');
 
 let currentFile = null;
 let type = null;
@@ -26,12 +29,24 @@ let sourceUrl = null;
 function showToast(msg) {
   toast.textContent = msg;
   toast.hidden = false;
-  setTimeout(() => toast.hidden = true, 3600);
+  setTimeout(() => toast.hidden = true, 4200);
+}
+
+function setBusy(text, percent = 0) {
+  progressBox.hidden = false;
+  progressText.textContent = text;
+  progressBar.value = percent;
+}
+
+function clearBusy() {
+  progressBox.hidden = true;
+  progressBar.value = 0;
+  progressText.textContent = '';
 }
 
 function fitCanvas(w, h) {
-  const maxW = 1400;
-  const maxH = 1000;
+  const maxW = 1280;
+  const maxH = 900;
   const r = Math.min(maxW / w, maxH / h, 1);
   canvas.width = Math.max(1, Math.round(w * r));
   canvas.height = Math.max(1, Math.round(h * r));
@@ -49,19 +64,11 @@ function clientToCanvas(e) {
 }
 
 function normalizeRect(a, b) {
-  return {
-    x: Math.min(a.x, b.x),
-    y: Math.min(a.y, b.y),
-    w: Math.abs(a.x - b.x),
-    h: Math.abs(a.y - b.y)
-  };
+  return { x: Math.min(a.x,b.x), y: Math.min(a.y,b.y), w: Math.abs(a.x-b.x), h: Math.abs(a.y-b.y) };
 }
 
 function updateSelectionEl() {
-  if (!selection || selection.w < 3 || selection.h < 3) {
-    selectionEl.hidden = true;
-    return;
-  }
+  if (!selection || selection.w < 3 || selection.h < 3) { selectionEl.hidden = true; return; }
   const crect = canvas.getBoundingClientRect();
   const wrect = wrap.getBoundingClientRect();
   selectionEl.hidden = false;
@@ -76,6 +83,7 @@ function loadFile(file) {
   processedRegions = [];
   selection = null;
   updateSelectionEl();
+  clearBusy();
   fileInfo.textContent = `${file.name} • ${(file.size / 1024 / 1024).toFixed(2)} MB`;
 
   if (sourceUrl) URL.revokeObjectURL(sourceUrl);
@@ -100,18 +108,18 @@ function loadFile(file) {
     img.onload = () => {
       fitCanvas(img.naturalWidth, img.naturalHeight);
       renderSourceFrame();
-      showToast(type === 'gif' ? 'تم تحميل GIF. يمكن تصديره GIF متحرك قصير أو صورة ثابتة.' : 'تم تحميل الصورة.');
+      showToast(type === 'gif' ? 'تم تحميل GIF. تصدير GIF المتحرك محدود حسب المتصفح.' : 'تم تحميل الصورة.');
     };
   }
 }
 
 function renderSourceFrame() {
   if ((type === 'image' || type === 'gif') && img.src) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img,0,0,canvas.width,canvas.height);
   } else if (type === 'video' && video.src) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(video,0,0,canvas.width,canvas.height);
   }
   processedRegions.forEach(r => applyStoredEffect(r));
 }
@@ -130,8 +138,7 @@ function makeRegion(rect = selection) {
   const x = Math.max(0, Math.floor(rect.x));
   const y = Math.max(0, Math.floor(rect.y));
   return {
-    x,
-    y,
+    x, y,
     w: Math.max(1, Math.min(canvas.width - x, Math.floor(rect.w))),
     h: Math.max(1, Math.min(canvas.height - y, Math.floor(rect.h))),
     effect: rect.effect || effect,
@@ -142,10 +149,7 @@ function makeRegion(rect = selection) {
 
 function applyEffect(rect = selection, remember = true) {
   const region = makeRegion(rect);
-  if (!region) {
-    showToast('حدد منطقة أولاً.');
-    return;
-  }
+  if (!region) { showToast('حدد منطقة أولاً.'); return; }
   applyStoredEffect(region);
   if (remember) processedRegions.push({ ...region });
 }
@@ -157,14 +161,13 @@ function applyStoredEffect(r) {
 }
 
 function blurRect(r) {
-  const pad = r.feather;
+  const pad = Math.max(0, r.feather);
   const sx = Math.max(0, r.x - pad);
   const sy = Math.max(0, r.y - pad);
   const sw = Math.min(canvas.width - sx, r.w + pad * 2);
   const sh = Math.min(canvas.height - sy, r.h + pad * 2);
   const off = document.createElement('canvas');
-  off.width = sw;
-  off.height = sh;
+  off.width = sw; off.height = sh;
   const o = off.getContext('2d');
   o.filter = `blur(${r.amount}px)`;
   o.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
@@ -209,111 +212,176 @@ function reset() {
   processedRegions = [];
   selection = null;
   updateSelectionEl();
+  clearBusy();
   renderSourceFrame();
   showToast('تمت إعادة الضبط.');
 }
 
 function downloadBlob(blob, name) {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
+  a.href = url;
   a.download = name;
+  document.body.appendChild(a);
   a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 8000);
 }
 
 function exportImage(format) {
-  if (!currentFile) {
-    showToast('ارفع ملف أولاً.');
-    return;
-  }
-  renderSourceFrame();
+  if (!currentFile) { showToast('ارفع ملف أولاً.'); return; }
   if (format === 'gif') return exportGif();
+  renderSourceFrame();
   const mime = format === 'jpeg' ? 'image/jpeg' : `image/${format}`;
   canvas.toBlob(b => {
-    if (!b) {
-      showToast('الصيغة غير مدعومة في هذا المتصفح.');
-      return;
-    }
+    if (!b) { showToast('الصيغة غير مدعومة في هذا المتصفح.'); return; }
     downloadBlob(b, `blurx-export.${format === 'jpeg' ? 'jpg' : format}`);
+    showToast('تم تنزيل الصورة.');
   }, mime, .95);
 }
 
 function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
+function seekVideoTo(t) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('انتهت مهلة قراءة الفيديو.')), 6000);
+    video.onseeked = () => { clearTimeout(timer); resolve(); };
+    video.currentTime = Math.min(t, Math.max(0, (video.duration || t) - 0.05));
+  });
+}
+
 async function exportGif() {
+  if (!currentFile) { showToast('ارفع ملف أولاً.'); return; }
+
   if (!window.GIF) {
-    showToast('مكتبة GIF لم تُحمّل. تأكد أن الموقع متصل بالإنترنت أو استخدم PNG/WEBP.');
+    showToast('مكتبة GIF غير محملة. تأكد من وجود script gif.js في index.html.');
+    clearBusy();
     return;
   }
 
+  const maxWidth = 640;
+  const scale = Math.min(1, maxWidth / canvas.width);
+  const outW = Math.max(1, Math.round(canvas.width * scale));
+  const outH = Math.max(1, Math.round(canvas.height * scale));
+
+  const outCanvas = document.createElement('canvas');
+  outCanvas.width = outW;
+  outCanvas.height = outH;
+  const outCtx = outCanvas.getContext('2d', { willReadFrequently: true });
+
   const encoder = new GIF({
-    workers: 2,
-    quality: 10,
-    width: canvas.width,
-    height: canvas.height,
-    workerScript: 'https://cdn.jsdelivr.net/npm/gif.js.optimized/dist/gif.worker.js'
+    workers: 1,
+    quality: 12,
+    width: outW,
+    height: outH,
+    workerScript: './gif.worker.js'
   });
 
-  showToast('جاري تجهيز GIF... للمقاطع الطويلة استخدم WEBM/MP4.');
-
-  if (type === 'video') {
-    const oldMuted = video.muted;
-    video.muted = true;
-    video.currentTime = 0;
-    await wait(250);
-    const duration = Math.min(Number.isFinite(video.duration) ? video.duration : 3, 5);
-    const fps = 10;
-    for (let t = 0; t < duration; t += 1 / fps) {
-      video.currentTime = t;
-      await new Promise(resolve => video.onseeked = resolve);
-      renderSourceFrame();
-      encoder.addFrame(ctx, { copy: true, delay: 1000 / fps });
+  let done = false;
+  const timeout = setTimeout(() => {
+    if (!done) {
+      clearBusy();
+      showToast('تصدير GIF أخذ وقت طويل. قلّل مدة الفيديو أو حجم الملف.');
+      try { encoder.abort && encoder.abort(); } catch(e) {}
     }
-    video.muted = oldMuted;
-  } else if (type === 'gif') {
-    const fps = 10;
-    for (let i = 0; i < 30; i++) {
-      renderSourceFrame();
-      encoder.addFrame(ctx, { copy: true, delay: 1000 / fps });
-      await wait(1000 / fps);
-    }
-  } else {
-    renderSourceFrame();
-    encoder.addFrame(ctx, { copy: true, delay: 1000 });
-  }
+  }, 45000);
 
+  encoder.on('progress', p => setBusy(`جاري تجهيز GIF... ${Math.round(p * 100)}%`, Math.round(p * 100)));
   encoder.on('finished', blob => {
+    done = true;
+    clearTimeout(timeout);
+    clearBusy();
     downloadBlob(blob, 'blurx-export.gif');
     showToast('تم تصدير GIF بنجاح.');
   });
-  encoder.render();
+  encoder.on('abort', () => {
+    clearBusy();
+    showToast('تم إيقاف تصدير GIF.');
+  });
+
+  try {
+    setBusy('جاري تجهيز GIF...', 5);
+
+    if (type === 'video') {
+      const oldMuted = video.muted;
+      const wasPaused = video.paused;
+      video.pause();
+      video.muted = true;
+
+      const duration = Math.min(Number.isFinite(video.duration) ? video.duration : 3, 4);
+      const fps = 8;
+      let frame = 0;
+      const total = Math.ceil(duration * fps);
+
+      for (let t = 0; t < duration; t += 1 / fps) {
+        await seekVideoTo(t);
+        renderSourceFrame();
+        outCtx.clearRect(0, 0, outW, outH);
+        outCtx.drawImage(canvas, 0, 0, outW, outH);
+        encoder.addFrame(outCtx, { copy: true, delay: Math.round(1000 / fps) });
+        frame++;
+        setBusy(`إضافة فريمات GIF... ${frame}/${total}`, Math.round((frame / total) * 70));
+      }
+
+      video.muted = oldMuted;
+      if (!wasPaused) video.play().catch(()=>{});
+    } else if (type === 'gif') {
+      // ملاحظة: المتصفح لا يعطينا كل فريمات GIF بسهولة؛ لذلك نلتقط 24 لقطة من العرض الحالي.
+      const fps = 8;
+      const total = 24;
+      for (let i = 0; i < total; i++) {
+        renderSourceFrame();
+        outCtx.clearRect(0, 0, outW, outH);
+        outCtx.drawImage(canvas, 0, 0, outW, outH);
+        encoder.addFrame(outCtx, { copy: true, delay: Math.round(1000 / fps) });
+        setBusy(`إضافة فريمات GIF... ${i + 1}/${total}`, Math.round(((i + 1) / total) * 70));
+        await wait(Math.round(1000 / fps));
+      }
+    } else {
+      renderSourceFrame();
+      outCtx.drawImage(canvas, 0, 0, outW, outH);
+      encoder.addFrame(outCtx, { copy: true, delay: 1000 });
+    }
+
+    setBusy('جاري إنشاء ملف GIF...', 75);
+    encoder.render();
+  } catch (err) {
+    clearTimeout(timeout);
+    clearBusy();
+    console.error(err);
+    showToast('فشل تصدير GIF: ' + (err.message || 'خطأ غير معروف'));
+  }
 }
 
 async function exportVideo(requested) {
-  if (!currentFile) {
-    showToast('ارفع ملف أولاً.');
-    return;
-  }
+  if (!currentFile) { showToast('ارفع ملف أولاً.'); return; }
   if (requested === 'gif') return exportGif();
   if (type !== 'video') {
     showToast('تصدير WEBM/MP4 يحتاج ملف فيديو. للصور استخدم JPG/PNG/WEBP/GIF.');
     return;
   }
-  const mp4Supported = MediaRecorder.isTypeSupported('video/mp4;codecs=h264') || MediaRecorder.isTypeSupported('video/mp4');
-  const supported = requested === 'mp4' && mp4Supported ? 'video/mp4' : 'video/webm';
-  const stream = canvas.captureStream(30);
-  const chunks = [];
-  const rec = new MediaRecorder(stream, { mimeType: supported });
-  rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
-  rec.onstop = () => downloadBlob(new Blob(chunks, { type: supported }), `blurx-video.${supported.includes('mp4') ? 'mp4' : 'webm'}`);
-  video.currentTime = 0;
-  await video.play();
-  rec.start();
-  showToast('جاري تسجيل الفيديو من الكانفاس...');
-  video.onended = () => {
-    rec.stop();
-    showToast('تم تجهيز ملف التصدير.');
-  };
+  try {
+    const mp4Supported = MediaRecorder.isTypeSupported('video/mp4;codecs=h264') || MediaRecorder.isTypeSupported('video/mp4');
+    const supported = requested === 'mp4' && mp4Supported ? 'video/mp4' : 'video/webm';
+    const stream = canvas.captureStream(30);
+    const chunks = [];
+    const rec = new MediaRecorder(stream, { mimeType: supported });
+    rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    rec.onstop = () => {
+      clearBusy();
+      downloadBlob(new Blob(chunks, { type: supported }), `blurx-video.${supported.includes('mp4') ? 'mp4' : 'webm'}`);
+      showToast('تم تجهيز ملف الفيديو.');
+    };
+    video.currentTime = 0;
+    await video.play();
+    rec.start();
+    setBusy('جاري تسجيل الفيديو من الكانفاس...', 20);
+    video.onended = () => rec.stop();
+  } catch(err) {
+    clearBusy();
+    showToast('فشل تصدير الفيديو. جرّب WEBM أو متصفح Chrome/Edge.');
+    console.error(err);
+  }
 }
 
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });

@@ -1,34 +1,20 @@
-# BlurX PWA - Cloudflare Pages
+# BlurX Pro - Fixed Cloudflare/GitHub Pages Build
 
-## تشغيل محلي
-افتح `index.html` مباشرة، أو شغل سيرفر محلي:
+## الملفات المعدلة
+- `index.html`: إضافة مكتبة gif.js قبل app.js.
+- `app.js`: إصلاح تصدير GIF، إضافة Progress، مهلة Timeout، وتقليل حجم GIF إلى 640px لتجنب التعليق.
+- `gif.worker.js`: ملف محلي يشغل worker الخاص بـ gif.js.
+- `styles.css`: إضافة شريط تقدم.
+- `sw.js`: تحديث cache.
 
-```bash
-npx serve .
-```
+## طريقة الرفع إلى GitHub
+1. فك ضغط الملف.
+2. ارفع كل الملفات بدل ملفات المشروع القديمة.
+3. اضغط Commit changes.
+4. انتظر دقيقة وافتح GitHub Pages.
 
-## رفعه على Cloudflare Pages
-
-### الطريقة السريعة بدون GitHub
-1. ادخل Cloudflare Dashboard.
-2. اختر Workers & Pages.
-3. اختر Create > Pages.
-4. اختر Upload assets.
-5. ارفع ملف ZIP أو اسحب مجلد المشروع.
-6. اضغط Deploy.
-
-### طريقة GitHub
-1. ارفع الملفات في مستودع GitHub.
-2. من Cloudflare: Workers & Pages > Create > Pages > Connect to Git.
-3. اختر المستودع.
-4. Build settings:
-   - Framework preset: None
-   - Build command: اتركه فارغ
-   - Output directory: /
-5. Deploy.
-
-## ملاحظات التصدير
-- الصور: PNG / JPG / WEBP / GIF.
-- GIF المتحرك يستخدم مكتبة gif.js من CDN، لذلك يحتاج اتصال إنترنت عند أول تحميل.
-- فيديو MP4 يعتمد على دعم المتصفح. إذا لم يدعم، سيتم التصدير WEBM.
-- الفيديو/GIF يتم تصديرهما بدون صوت لأن المعالجة تتم على Canvas داخل المتصفح.
+## ملاحظة
+تصدير GIF من فيديو طويل أو 4K ثقيل جداً داخل المتصفح. الأفضل:
+- فيديو 3-4 ثواني.
+- حجم أقل من 20MB.
+- استخدم Chrome أو Edge.

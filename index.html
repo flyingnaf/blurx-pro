@@ -1,89 +1,89 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BlurX - تمويه وبكسلة</title>
-  <meta name="theme-color" content="#0b0b0f" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BlurX Pro</title>
+  <meta name="theme-color" content="#b30000" />
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <main class="app-shell">
-    <section class="hero">
+  <main class="app">
+    <header class="hero">
       <div>
-        <p class="eyebrow">PWA • صور • فيديو • GIF</p>
-        <h1>BlurX</h1>
-        <p class="subtitle">تطبيق عربي لتشويش، بكسلة، وتمويه جزء محدد من الصور والمقاطع بتصميم أحمر وأسود.</p>
+        <h1>BlurX Pro</h1>
+        <p>تمويه، بكسلة، أو تعتيم جزء محدد من الصور والفيديو و GIF.</p>
       </div>
-      <div class="badge">محلي وآمن<br><span>بدون رفع ملفات</span></div>
-    </section>
+      <span class="badge">PWA</span>
+    </header>
 
-    <section class="card uploader">
-      <label for="fileInput" class="drop-zone" id="dropZone">
-        <input id="fileInput" type="file" accept="image/*,video/*,.gif,.mov,.mp4,.webm,.m4v" hidden />
-        <span class="plus">+</span>
-        <strong>ارفع صورة أو فيديو أو GIF</strong>
-        <small>اسحب الملف هنا أو اضغط للاختيار</small>
-      </label>
-      <p id="fileInfo" class="file-info">لم يتم اختيار ملف بعد.</p>
+    <section class="panel upload" id="dropZone">
+      <input id="fileInput" type="file" accept="image/*,video/*,.gif,.mov,.mp4,.webm,.m4v" />
+      <label for="fileInput">اختر ملف أو اسحبه هنا</label>
+      <small id="fileInfo">لم يتم اختيار ملف</small>
     </section>
 
     <section class="workspace">
-      <div class="card preview-card">
-        <div class="canvas-wrap" id="canvasWrap">
-          <canvas id="canvas"></canvas>
-          <video id="sourceVideo" playsinline muted hidden></video>
-          <img id="sourceImage" alt="source" hidden />
-          <div id="selection" class="selection" hidden></div>
-        </div>
-        <div class="hint">حدد منطقة بالماوس أو بالإصبع. دبل كلك / لمستين لتطبيق التأثير على كامل الملف.</div>
-      </div>
-
-      <aside class="card controls">
-        <h2>الإعدادات</h2>
-        <label>نوع التأثير</label>
-        <div class="segmented">
+      <aside class="panel tools">
+        <h2>الأدوات</h2>
+        <div class="row">
           <button class="active" data-effect="blur">تمويه</button>
           <button data-effect="pixelate">بكسلة</button>
           <button data-effect="darken">تعتيم</button>
         </div>
 
-        <label for="intensity">قوة التأثير: <span id="intensityValue">16</span></label>
-        <input id="intensity" type="range" min="2" max="80" value="16" />
+        <label>قوة التأثير: <b id="intensityValue">16</b></label>
+        <input id="intensity" type="range" min="1" max="60" value="16" />
 
-        <label for="feather">نعومة الحواف: <span id="featherValue">0</span></label>
-        <input id="feather" type="range" min="0" max="30" value="0" />
+        <label>نعومة الحواف: <b id="featherValue">8</b></label>
+        <input id="feather" type="range" min="0" max="40" value="8" />
 
-        <div class="button-grid">
-          <button id="applyBtn" class="primary">تطبيق على المنطقة</button>
+        <div class="row">
+          <button id="applyBtn">تطبيق على التحديد</button>
           <button id="fullBtn">تطبيق كامل</button>
+        </div>
+        <div class="row">
           <button id="resetBtn">إعادة ضبط</button>
-          <button id="playBtn">تشغيل / إيقاف</button>
+          <button id="playBtn">تشغيل/إيقاف</button>
         </div>
 
-        <hr>
-        <label>تصدير الصور</label>
-        <div class="button-grid three">
+        <h2>تصدير الصور</h2>
+        <div class="grid">
           <button data-export-img="png">PNG</button>
           <button data-export-img="jpeg">JPG</button>
           <button data-export-img="webp">WEBP</button>
           <button data-export-img="gif">GIF</button>
         </div>
 
-        <label>تصدير الفيديو/GIF</label>
-        <div class="button-grid three">
+        <h2>تصدير الفيديو</h2>
+        <div class="grid">
           <button data-export-video="webm">WEBM</button>
-          <button data-export-video="mp4">MP4*</button>
-          <button data-export-video="gif">GIF*</button>
+          <button data-export-video="mp4">MP4 إن أمكن</button>
+          <button data-export-video="gif">GIF قصير</button>
         </div>
 
-        <p class="note">* المتصفح قد لا يدعم MP4/GIF مباشرة. عند عدم الدعم سيتم التصدير كـ WEBM أو صورة ثابتة. تصدير الفيديو من الكانفاس بدون صوت.</p>
+        <div id="progressBox" class="progressBox" hidden>
+          <span id="progressText"></span>
+          <progress id="progressBar" max="100" value="0"></progress>
+        </div>
+
+        <p class="note">اضغط مرتين على المعاينة لتحديد كامل الملف. GIF والفيديو الطويل قد يحتاجان وقتاً وحجماً أقل.</p>
       </aside>
+
+      <section class="preview panel">
+        <div id="canvasWrap" class="canvasWrap">
+          <canvas id="canvas"></canvas>
+          <div id="selection" hidden></div>
+        </div>
+        <img id="sourceImage" alt="" hidden />
+        <video id="sourceVideo" playsinline controls muted hidden></video>
+      </section>
     </section>
   </main>
 
-  <div id="toast" class="toast" hidden></div>
+  <div id="toast" hidden></div>
+
   <script src="https://cdn.jsdelivr.net/npm/gif.js.optimized/dist/gif.js"></script>
   <script src="app.js"></script>
 </body>
