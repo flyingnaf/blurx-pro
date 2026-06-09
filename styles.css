@@ -20,3 +20,6 @@ canvas{max-width:100%;background:#050505;border-radius:16px;border:1px solid #33
 #toast{position:fixed;bottom:18px;left:18px;right:18px;margin:auto;background:#1a1a22;border:1px solid #3a3a48;color:#fff;padding:14px 18px;border-radius:14px;box-shadow:0 20px 60px #0009;z-index:10;max-width:640px;text-align:center}
 .progressBox{margin-top:14px;background:#0a0a0f;border:1px solid var(--line);border-radius:14px;padding:12px}.progressBox span{display:block;margin-bottom:8px;color:#fff}.progressBox progress{width:100%;accent-color:var(--red)}
 @media(max-width:900px){.app{padding:10px}.workspace{grid-template-columns:1fr}.tools{position:static;order:2}.preview{order:1;min-height:340px;padding:8px}.hero{display:block;padding:18px}h1{font-size:28px}.badge{display:inline-block;margin-top:8px}.row,.grid{grid-template-columns:1fr 1fr}button{padding:13px 8px;font-size:13px}}
+
+.textInput{width:100%;border:1px solid #3a3a48;background:#09090e;color:#fff;border-radius:13px;padding:12px 10px;font-family:inherit;margin-top:8px}
+.textInput:focus,select:focus{outline:2px solid #d50000}

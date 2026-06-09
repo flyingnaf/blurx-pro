@@ -1,6 +1,6 @@
 {
-  "name": "BlurX Pro Mobile",
-  "short_name": "BlurX",
+  "name": "BlurX Pro Watermark",
+  "short_name": "BlurX WM",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#08080b",
